@@ -57,6 +57,7 @@ export default function DonorRegistration() {
   });
 
   const onSubmit = (data: InsertDonor) => {
+    console.log(data)
     registerMutation.mutate(data);
   };
 

@@ -5,6 +5,7 @@ import {
   donations,
   bloodInventory,
   adminUsers,
+  users,
   type Donor,
   type InsertDonor,
   type BloodRequest,
@@ -15,17 +16,29 @@ import {
   type InsertBloodInventory,
   type AdminUser,
   type InsertAdminUser,
+  type User,
+  type InsertUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Users (Authentication)
+  getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<InsertUser>): Promise<User>;
+
   // Donors
   getDonor(id: string): Promise<Donor | undefined>;
   getDonorByEmail(email: string): Promise<Donor | undefined>;
   getAllDonors(): Promise<Donor[]>;
   createDonor(donor: InsertDonor): Promise<Donor>;
-  updateDonorApproval(id: string, status: "approved" | "rejected"): Promise<Donor>;
+  updateDonorApproval(
+    id: string,
+    status: "approved" | "rejected"
+  ): Promise<Donor>;
   getMatchingDonors(bloodGroup: string, city?: string): Promise<Donor[]>;
 
   // Blood Requests
@@ -33,8 +46,14 @@ export interface IStorage {
   getAllBloodRequests(): Promise<BloodRequest[]>;
   getActiveBloodRequests(): Promise<BloodRequest[]>;
   createBloodRequest(request: InsertBloodRequest): Promise<BloodRequest>;
-  updateRequestApproval(id: string, status: "approved" | "rejected"): Promise<BloodRequest>;
-  updateRequestStatus(id: string, status: "pending" | "in_progress" | "completed" | "cancelled"): Promise<BloodRequest>;
+  updateRequestApproval(
+    id: string,
+    status: "approved" | "rejected"
+  ): Promise<BloodRequest>;
+  updateRequestStatus(
+    id: string,
+    status: "pending" | "in_progress" | "completed" | "cancelled"
+  ): Promise<BloodRequest>;
 
   // Donations
   getDonation(id: string): Promise<Donation | undefined>;
@@ -44,8 +63,13 @@ export interface IStorage {
 
   // Blood Inventory
   getBloodInventory(): Promise<BloodInventory[]>;
-  getBloodInventoryByGroup(bloodGroup: string): Promise<BloodInventory | undefined>;
-  updateBloodInventory(bloodGroup: string, data: Partial<InsertBloodInventory>): Promise<BloodInventory>;
+  getBloodInventoryByGroup(
+    bloodGroup: string
+  ): Promise<BloodInventory | undefined>;
+  updateBloodInventory(
+    bloodGroup: string,
+    data: Partial<InsertBloodInventory>
+  ): Promise<BloodInventory>;
   initializeBloodInventory(): Promise<void>;
 
   // Admin Stats
@@ -68,6 +92,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Users (Authentication)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: string, data: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
   // Donors
   async getDonor(id: string): Promise<Donor | undefined> {
     const [donor] = await db.select().from(donors).where(eq(donors.id, id));
@@ -75,7 +128,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDonorByEmail(email: string): Promise<Donor | undefined> {
-    const [donor] = await db.select().from(donors).where(eq(donors.email, email));
+    const [donor] = await db
+      .select()
+      .from(donors)
+      .where(eq(donors.email, email));
     return donor || undefined;
   }
 
@@ -88,7 +144,10 @@ export class DatabaseStorage implements IStorage {
     return donor;
   }
 
-  async updateDonorApproval(id: string, status: "approved" | "rejected"): Promise<Donor> {
+  async updateDonorApproval(
+    id: string,
+    status: "approved" | "rejected"
+  ): Promise<Donor> {
     const [donor] = await db
       .update(donors)
       .set({ approvalStatus: status, updatedAt: new Date() })
@@ -98,31 +157,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMatchingDonors(bloodGroup: string, city?: string): Promise<Donor[]> {
-    let query = db.select().from(donors).where(
-      and(
-        eq(donors.bloodGroup, bloodGroup as any),
-        eq(donors.approvalStatus, "approved")
-      )
-    );
+    let query = db
+      .select()
+      .from(donors)
+      .where(
+        and(
+          eq(donors.bloodGroup, bloodGroup as any),
+          eq(donors.approvalStatus, "approved")
+        )
+      );
 
     const results = await query;
-    
+
     // Filter by city if provided (case insensitive)
     if (city) {
-      return results.filter(d => d.city.toLowerCase().includes(city.toLowerCase()));
+      return results.filter((d) =>
+        d.city.toLowerCase().includes(city.toLowerCase())
+      );
     }
-    
+
     return results;
   }
 
   // Blood Requests
   async getBloodRequest(id: string): Promise<BloodRequest | undefined> {
-    const [request] = await db.select().from(bloodRequests).where(eq(bloodRequests.id, id));
+    const [request] = await db
+      .select()
+      .from(bloodRequests)
+      .where(eq(bloodRequests.id, id));
     return request || undefined;
   }
 
   async getAllBloodRequests(): Promise<BloodRequest[]> {
-    return await db.select().from(bloodRequests).orderBy(desc(bloodRequests.createdAt));
+    return await db
+      .select()
+      .from(bloodRequests)
+      .orderBy(desc(bloodRequests.createdAt));
   }
 
   async getActiveBloodRequests(): Promise<BloodRequest[]> {
@@ -139,12 +209,20 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
   }
 
-  async createBloodRequest(insertRequest: InsertBloodRequest): Promise<BloodRequest> {
-    const [request] = await db.insert(bloodRequests).values(insertRequest).returning();
+  async createBloodRequest(
+    insertRequest: InsertBloodRequest
+  ): Promise<BloodRequest> {
+    const [request] = await db
+      .insert(bloodRequests)
+      .values(insertRequest)
+      .returning();
     return request;
   }
 
-  async updateRequestApproval(id: string, status: "approved" | "rejected"): Promise<BloodRequest> {
+  async updateRequestApproval(
+    id: string,
+    status: "approved" | "rejected"
+  ): Promise<BloodRequest> {
     const [request] = await db
       .update(bloodRequests)
       .set({ approvalStatus: status, updatedAt: new Date() })
@@ -167,7 +245,10 @@ export class DatabaseStorage implements IStorage {
 
   // Donations
   async getDonation(id: string): Promise<Donation | undefined> {
-    const [donation] = await db.select().from(donations).where(eq(donations.id, id));
+    const [donation] = await db
+      .select()
+      .from(donations)
+      .where(eq(donations.id, id));
     return donation || undefined;
   }
 
@@ -191,15 +272,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDonation(insertDonation: InsertDonation): Promise<Donation> {
-    const [donation] = await db.insert(donations).values(insertDonation).returning();
-    
+    const [donation] = await db
+      .insert(donations)
+      .values(insertDonation)
+      .returning();
+
     // Update donor's last donation date
-    await this.updateDonorLastDonation(insertDonation.donorId, insertDonation.donationDate || new Date());
-    
+    await this.updateDonorLastDonation(
+      insertDonation.donorId,
+      insertDonation.donationDate || new Date()
+    );
+
     return donation;
   }
 
-  async updateDonorLastDonation(donorId: string, donationDate: Date): Promise<void> {
+  async updateDonorLastDonation(
+    donorId: string,
+    donationDate: Date
+  ): Promise<void> {
     await db
       .update(donors)
       .set({ lastDonationDate: donationDate, updatedAt: new Date() })
@@ -211,7 +301,9 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bloodInventory);
   }
 
-  async getBloodInventoryByGroup(bloodGroup: string): Promise<BloodInventory | undefined> {
+  async getBloodInventoryByGroup(
+    bloodGroup: string
+  ): Promise<BloodInventory | undefined> {
     const [inventory] = await db
       .select()
       .from(bloodInventory)
@@ -224,7 +316,7 @@ export class DatabaseStorage implements IStorage {
     data: Partial<InsertBloodInventory>
   ): Promise<BloodInventory> {
     const existing = await this.getBloodInventoryByGroup(bloodGroup);
-    
+
     if (existing) {
       const [updated] = await db
         .update(bloodInventory)
@@ -243,7 +335,7 @@ export class DatabaseStorage implements IStorage {
 
   async initializeBloodInventory(): Promise<void> {
     const bloodGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
-    
+
     for (const group of bloodGroups) {
       const exists = await this.getBloodInventoryByGroup(group);
       if (!exists) {
@@ -258,7 +350,9 @@ export class DatabaseStorage implements IStorage {
 
   // Admin Stats
   async getAdminStats() {
-    const totalDonors = await db.select({ count: sql<number>`count(*)::int` }).from(donors);
+    const totalDonors = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(donors);
     const approvedDonors = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(donors)
@@ -267,8 +361,10 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)::int` })
       .from(donors)
       .where(eq(donors.approvalStatus, "pending"));
-    
-    const totalRequests = await db.select({ count: sql<number>`count(*)::int` }).from(bloodRequests);
+
+    const totalRequests = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(bloodRequests);
     const activeRequests = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(bloodRequests)
@@ -282,9 +378,11 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)::int` })
       .from(bloodRequests)
       .where(eq(bloodRequests.status, "completed"));
-    
-    const totalDonations = await db.select({ count: sql<number>`count(*)::int` }).from(donations);
-    
+
+    const totalDonations = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(donations);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayDonations = await db
@@ -309,7 +407,7 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)::int` })
       .from(donors)
       .where(eq(donors.approvalStatus, "approved"));
-    
+
     const activeRequests = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(bloodRequests)
@@ -319,13 +417,15 @@ export class DatabaseStorage implements IStorage {
           eq(bloodRequests.status, "pending")
         )
       );
-    
+
     const completedRequests = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(bloodRequests)
       .where(eq(bloodRequests.status, "completed"));
-    
-    const totalDonations = await db.select({ count: sql<number>`count(*)::int` }).from(donations);
+
+    const totalDonations = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(donations);
 
     return {
       totalDonors: approvedDonors[0]?.count || 0,
