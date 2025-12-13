@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Droplet, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import {
     DropdownMenu,
@@ -33,7 +33,23 @@ export function Navbar() {
         { name: "Request Blood", href: "/request-blood" },
     ];
 
+    const adminNavigation = [
+        { name: "Dashboard", href: "/admin" },
+        { name: "Donor Tracker", href: "/admin/donors" },
+        { name: "Blood Requests", href: "/admin/requests" },
+        { name: "Case Log", href: "/admin/case-log" },
+        { name: "Statistics", href: "/admin/stats" },
+    ];
+
     const isActive = (path: string) => location === path;
+    const isAdminRoute = location.startsWith("/admin");
+
+    // If an admin is authenticated on the login route, push them to the admin dashboard
+    useEffect(() => {
+        if (isAuthenticated && user?.role === "admin" && location === "/login") {
+            setLocation("/admin");
+        }
+    }, [isAuthenticated, user, location, setLocation]);
 
     return (
         <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -54,18 +70,52 @@ export function Navbar() {
 
                         {/* Desktop Navigation Links */}
                         <div className="hidden md:ml-8 md:flex md:space-x-4">
-                            {navigation.map((item) => (
-                                <Link key={item.name} href={item.href}>
-                                    <a
-                                        className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.href)
-                                            ? "text-red-600 bg-red-50"
-                                            : "text-gray-700 hover:text-red-600 hover:bg-red-50"
-                                            }`}
-                                    >
-                                        {item.name}
-                                    </a>
-                                </Link>
-                            ))}
+                            {/* On admin routes (for admin users), show only admin menu */}
+                            {isAuthenticated && user?.role === "admin" && isAdminRoute
+                                ? adminNavigation.map((item) => (
+                                      <button
+                                          key={item.name}
+                                          onClick={() => setLocation(item.href)}
+                                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.href)
+                                              ? "text-red-600 bg-red-50"
+                                              : "text-gray-700 hover:text-red-600 hover:bg-red-50"
+                                              }`}
+                                      >
+                                          {item.name}
+                                      </button>
+                                  ))
+                                : navigation.map((item) => (
+                                      <button
+                                          key={item.name}
+                                          onClick={() => {
+                                              const goHomeAndDispatch = (eventName: string) => {
+                                                  const dispatch = () =>
+                                                      window.dispatchEvent(new CustomEvent(eventName));
+
+                                                  if (location !== "/") {
+                                                      setLocation("/");
+                                                      setTimeout(dispatch, 0);
+                                                  } else {
+                                                      dispatch();
+                                                  }
+                                              };
+
+                                              if (item.href === "/register-donor") {
+                                                  goHomeAndDispatch("open-register-donor");
+                                              } else if (item.href === "/request-blood") {
+                                                  goHomeAndDispatch("open-request-blood");
+                                              } else {
+                                                  setLocation(item.href);
+                                              }
+                                          }}
+                                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.href)
+                                              ? "text-red-600 bg-red-50"
+                                              : "text-gray-700 hover:text-red-600 hover:bg-red-50"
+                                              }`}
+                                      >
+                                          {item.name}
+                                      </button>
+                                  ))}
                         </div>
                     </div>
 
@@ -73,7 +123,7 @@ export function Navbar() {
                     <div className="flex items-center gap-4">
                         {isAuthenticated && user ? (
                             <>
-                                {user.role === "admin" && (
+                                {user.role === "admin" && !isAdminRoute && (
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -96,23 +146,29 @@ export function Navbar() {
                                     <DropdownMenuContent align="end" className="w-56">
                                         <DropdownMenuLabel>
                                             <div className="flex flex-col space-y-1">
-                                                <p className="text-sm font-medium">{user.name}</p>
+                                                <p className="text-sm font-medium text-red-600 capitalize">{user.name}</p>
                                                 <p className="text-xs text-muted-foreground">{user.email}</p>
-                                                <p className="text-xs text-muted-foreground capitalize">
-                                                    Role: {user.role}
-                                                </p>
+        
                                             </div>
                                         </DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        {user.role === "admin" && (
+                                        {user.role === "admin" && !isAdminRoute && (
                                             <>
-                                                <DropdownMenuItem onClick={() => setLocation("/admin")}>
+                                                <DropdownMenuItem
+                                                    onClick={() => setLocation("/admin")}
+                                                    className="cursor-pointer text-foreground"
+                                                >
                                                     Admin Panel
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                             </>
                                         )}
-                                        <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleLogout}
+                                            className="cursor-pointer text-foreground focus:text-red-600 focus:bg-red-50"
+                                        >
+                                            Logout
+                                        </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </>
@@ -152,7 +208,10 @@ export function Navbar() {
             {mobileMenuOpen && (
                 <div className="md:hidden border-t">
                     <div className="px-2 pt-2 pb-3 space-y-1">
-                        {navigation.map((item) => (
+                        {(isAuthenticated && user?.role === "admin" && isAdminRoute
+                            ? adminNavigation
+                            : navigation
+                        ).map((item) => (
                             <Link key={item.name} href={item.href}>
                                 <a
                                     onClick={() => setMobileMenuOpen(false)}
@@ -167,17 +226,6 @@ export function Navbar() {
                         ))}
                         {isAuthenticated && user ? (
                             <>
-                                {user.role === "admin" && (
-                                    <button
-                                        onClick={() => {
-                                            setLocation("/admin");
-                                            setMobileMenuOpen(false);
-                                        }}
-                                        className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                        Admin Panel
-                                    </button>
-                                )}
                                 <button
                                     onClick={() => {
                                         handleLogout();
