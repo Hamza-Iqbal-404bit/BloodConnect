@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Droplet, AlertCircle } from "lucide-react";
 
@@ -150,24 +151,12 @@ export default function Register() {
                                     <FormItem>
                                         <FormLabel>Phone Number (Optional)</FormLabel>
                                         <FormControl>
-                                            <div className="flex gap-2">
-                                                <Select value={phoneCode} onValueChange={setPhoneCode}>
-                                                    <SelectTrigger className="w-28">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="+92" className="text-foreground">+92</SelectItem>
-                                                        <SelectItem value="+91" className="text-foreground">+91</SelectItem>
-                                                        <SelectItem value="+1" className="text-foreground">+1</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <Input
-                                                    type="tel"
-                                                    placeholder="300 1234567"
-                                                    {...field}
-                                                    value={field.value || ""}
-                                                />
-                                            </div>
+                                            <PhoneNumberInput
+                                                code={phoneCode}
+                                                onCodeChange={setPhoneCode}
+                                                value={field.value || ""}
+                                                onChange={field.onChange}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

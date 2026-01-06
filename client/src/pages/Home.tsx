@@ -7,48 +7,22 @@ import { ActiveRequestCard } from "@/components/ActiveRequestCard";
 import { Droplet, Users, Heart, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import type { BloodInventory, BloodRequest } from "@shared/schema";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import DonorRegistration from "@/pages/DonorRegistration";
 import RequestBlood from "@/pages/RequestBlood";
+import { AppDialog } from "@/components/shared/AppDialog";
+import { useUiDialogs } from "@/lib/ui-dialogs";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 
 export default function Home() {
-  const [showDonorModal, setShowDonorModal] = useState(false);
-  const [showRequestModal, setShowRequestModal] = useState(false);
-
-  // Open/close dialogs based on custom events (from navbar and inner forms)
-  useEffect(() => {
-    const openRegister = () => {
-      setShowDonorModal(true);
-      setShowRequestModal(false);
-    };
-
-    const openRequest = () => {
-      setShowRequestModal(true);
-      setShowDonorModal(false);
-    };
-
-    const closeRegister = () => {
-      setShowDonorModal(false);
-    };
-
-    const closeRequest = () => {
-      setShowRequestModal(false);
-    };
-
-    window.addEventListener("open-register-donor", openRegister as EventListener);
-    window.addEventListener("open-request-blood", openRequest as EventListener);
-    window.addEventListener("close-register-donor", closeRegister as EventListener);
-    window.addEventListener("close-request-blood", closeRequest as EventListener);
-
-    return () => {
-      window.removeEventListener("open-register-donor", openRegister as EventListener);
-      window.removeEventListener("open-request-blood", openRequest as EventListener);
-      window.removeEventListener("close-register-donor", closeRegister as EventListener);
-      window.removeEventListener("close-request-blood", closeRequest as EventListener);
-    };
-  }, []);
+  const {
+    showDonorModal,
+    showRequestModal,
+    openDonorModal,
+    openRequestModal,
+    closeDonorModal,
+    closeRequestModal,
+  } = useUiDialogs();
 
   const { data: inventory, isLoading: inventoryLoading } = useQuery<BloodInventory[]>({
     queryKey: ["/api/blood-inventory"],
@@ -86,7 +60,7 @@ export default function Home() {
                 size="lg"
                 className="w-full sm:w-auto"
                 data-testid="button-register-donor"
-                onClick={() => setShowDonorModal(true)}
+                onClick={openDonorModal}
               >
                 <Users className="w-5 h-5 mr-2" />
                 Register as Donor
@@ -96,7 +70,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full sm:w-auto"
                 data-testid="button-request-blood"
-                onClick={() => setShowRequestModal(true)}
+                onClick={openRequestModal}
               >
                 <Droplet className="w-5 h-5 mr-2" />
                 Request Blood
@@ -228,7 +202,7 @@ export default function Home() {
           <Button
             size="lg"
             data-testid="button-join-now"
-            onClick={() => setShowDonorModal(true)}
+            onClick={openDonorModal}
           >
             <Heart className="w-5 h-5 mr-2" />
             Join Now
@@ -248,42 +222,14 @@ export default function Home() {
       </footer>
 
       {/* Donor Registration Modal */}
-      <Dialog open={showDonorModal} onOpenChange={setShowDonorModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-          <div className="sticky top-0 z-10 flex justify-end bg-background/80 backdrop-blur px-4 py-2 border-b">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDonorModal(false)}
-              aria-label="Close"
-            >
-              ×
-            </Button>
-          </div>
-          <div className="p-4 sm:p-6">
-            <DonorRegistration variant="dialog" />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AppDialog open={showDonorModal} onOpenChange={(open) => (open ? openDonorModal() : closeDonorModal())}>
+        <DonorRegistration variant="dialog" />
+      </AppDialog>
 
       {/* Blood Request Modal */}
-      <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-          <div className="sticky top-0 z-10 flex justify-end bg-background/80 backdrop-blur px-4 py-2 border-b">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowRequestModal(false)}
-              aria-label="Close"
-            >
-              ×
-            </Button>
-          </div>
-          <div className="p-4 sm:p-6">
-            <RequestBlood variant="dialog" />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AppDialog open={showRequestModal} onOpenChange={(open) => (open ? openRequestModal() : closeRequestModal())}>
+        <RequestBlood variant="dialog" />
+      </AppDialog>
     </div>
   );
 }

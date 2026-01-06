@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { insertBloodRequestSchema, type InsertBloodRequest } from "@shared/schema";
@@ -338,24 +339,13 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
                         <FormItem>
                           <FormLabel>Contact Phone *</FormLabel>
                           <FormControl>
-                            <div className="flex gap-2">
-                              <Select value={contactPhoneCode} onValueChange={setContactPhoneCode}>
-                                <SelectTrigger className="w-28">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="+92" className="text-foreground">+92</SelectItem>
-                                  <SelectItem value="+91" className="text-foreground">+91</SelectItem>
-                                  <SelectItem value="+1" className="text-foreground">+1</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                placeholder="300 1234567"
-                                {...field}
-                                value={field.value || ""}
-                                data-testid="input-contact-phone"
-                              />
-                            </div>
+                            <PhoneNumberInput
+                              code={contactPhoneCode}
+                              onCodeChange={setContactPhoneCode}
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              inputTestId="input-contact-phone"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -377,24 +367,13 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
                         <FormItem>
                           <FormLabel>WhatsApp (Optional)</FormLabel>
                           <FormControl>
-                            <div className="flex gap-2">
-                              <Select value={contactWhatsappCode} onValueChange={setContactWhatsappCode}>
-                                <SelectTrigger className="w-28">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="+92" className="text-foreground">+92</SelectItem>
-                                  <SelectItem value="+91" className="text-foreground">+91</SelectItem>
-                                  <SelectItem value="+1" className="text-foreground">+1</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                placeholder="300 1234567"
-                                {...field}
-                                value={field.value || ""}
-                                data-testid="input-contact-whatsapp"
-                              />
-                            </div>
+                            <PhoneNumberInput
+                              code={contactWhatsappCode}
+                              onCodeChange={setContactWhatsappCode}
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              inputTestId="input-contact-whatsapp"
+                            />
                           </FormControl>
                           <FormDescription>For quick contact</FormDescription>
                           <FormMessage />

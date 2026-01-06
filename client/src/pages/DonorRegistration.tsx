@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { useToast } from "@/hooks/use-toast";
 import { insertDonorSchema, type InsertDonor } from "@shared/schema";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -204,24 +205,13 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
                       <FormItem>
                         <FormLabel>Phone Number *</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Select value={phoneCode} onValueChange={setPhoneCode}>
-                              <SelectTrigger className="w-28">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="+92" className="text-foreground">+92</SelectItem>
-                                <SelectItem value="+91" className="text-foreground">+91</SelectItem>
-                                <SelectItem value="+1" className="text-foreground">+1</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              placeholder="300 1234567"
-                              {...field}
-                              value={field.value || ""}
-                              data-testid="input-phone"
-                            />
-                          </div>
+                          <PhoneNumberInput
+                            code={phoneCode}
+                            onCodeChange={setPhoneCode}
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            inputTestId="input-phone"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -311,24 +301,13 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
                       <FormItem>
                         <FormLabel>WhatsApp Number (Optional)</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Select value={whatsappCode} onValueChange={setWhatsappCode}>
-                              <SelectTrigger className="w-28">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="+92" className="text-foreground">+92</SelectItem>
-                                <SelectItem value="+91" className="text-foreground">+91</SelectItem>
-                                <SelectItem value="+1" className="text-foreground">+1</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              placeholder="300 1234567"
-                              {...field}
-                              value={field.value || ""}
-                              data-testid="input-whatsapp"
-                            />
-                          </div>
+                          <PhoneNumberInput
+                            code={whatsappCode}
+                            onCodeChange={setWhatsappCode}
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            inputTestId="input-whatsapp"
+                          />
                         </FormControl>
                         <FormDescription>For quick contact</FormDescription>
                         <FormMessage />

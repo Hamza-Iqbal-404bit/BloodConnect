@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Droplet, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { useUiDialogs } from "@/lib/ui-dialogs";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -17,6 +18,7 @@ export function Navbar() {
     const [location, setLocation] = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { user, isAuthenticated, logout } = useAuth();
+    const { openDonorModal, openRequestModal } = useUiDialogs();
 
     const handleLogout = async () => {
         await fetch("/api/auth/logout", {
@@ -88,22 +90,16 @@ export function Navbar() {
                                       <button
                                           key={item.name}
                                           onClick={() => {
-                                              const goHomeAndDispatch = (eventName: string) => {
-                                                  const dispatch = () =>
-                                                      window.dispatchEvent(new CustomEvent(eventName));
-
+                                              if (item.href === "/register-donor") {
                                                   if (location !== "/") {
                                                       setLocation("/");
-                                                      setTimeout(dispatch, 0);
-                                                  } else {
-                                                      dispatch();
                                                   }
-                                              };
-
-                                              if (item.href === "/register-donor") {
-                                                  goHomeAndDispatch("open-register-donor");
+                                                  openDonorModal();
                                               } else if (item.href === "/request-blood") {
-                                                  goHomeAndDispatch("open-request-blood");
+                                                  if (location !== "/") {
+                                                      setLocation("/");
+                                                  }
+                                                  openRequestModal();
                                               } else {
                                                   setLocation(item.href);
                                               }

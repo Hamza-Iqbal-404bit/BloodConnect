@@ -18,6 +18,7 @@ import DonorTracker from "@/pages/DonorTracker";
 import RequestManager from "@/pages/RequestManager";
 import CaseLog from "@/pages/CaseLog";
 import NotFound from "@/pages/not-found";
+import { UiDialogProvider } from "@/lib/ui-dialogs";
 
 // Wrapper components for routes so we don't pass router props to dialog variants
 const DonorRegistrationPage = () => <DonorRegistration />;
@@ -65,20 +66,22 @@ function AdminRouter() {
 function Router() {
   return (
     <>
-      <Navbar />
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
-        <Route path="/admin/:rest*">
-          {() => <AdminRouter />}
-        </Route>
-        <Route path="/admin">
-          {() => <AdminRouter />}
-        </Route>
-        <Route>
-          {() => <PublicRouter />}
-        </Route>
-      </Switch>
+      <UiDialogProvider>
+        <Navbar />
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/admin/:rest*">
+            {() => <AdminRouter />}
+          </Route>
+          <Route path="/admin">
+            {() => <AdminRouter />}
+          </Route>
+          <Route>
+            {() => <PublicRouter />}
+          </Route>
+        </Switch>
+      </UiDialogProvider>
     </>
   );
 }
