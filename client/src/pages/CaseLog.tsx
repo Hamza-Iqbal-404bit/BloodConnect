@@ -36,8 +36,22 @@ import { Search, Plus, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { insertDonationSchema, type InsertDonation, type Donation, type Donor, type BloodRequest } from "@shared/schema";
+import type { Donation, Donor, BloodRequest } from "@/types";
+import { ApprovalStatus, RequestStatus } from "@/types";
+import { bloodGroupDisplay } from "@/lib/enum-utils";
 import { AppDialog } from "@/components/shared/AppDialog";
+import { z } from "zod";
+
+// Form validation schema
+const donationFormSchema = z.object({
+  donorId: z.string().min(1, "Please select a donor"),
+  requestId: z.string().min(1, "Please select a request"),
+  donationDate: z.date(),
+  unitsContributed: z.number().min(1, "At least 1 unit required"),
+  remarks: z.string().optional(),
+});
+
+type DonationFormData = z.infer<typeof donationFormSchema>;
 
 type DonationWithDetails = Donation & {
   donor: Donor;
@@ -63,8 +77,8 @@ export default function CaseLog() {
     enabled: showAddDialog,
   });
 
-  const form = useForm<InsertDonation>({
-    resolver: zodResolver(insertDonationSchema),
+  const form = useForm<DonationFormData>({
+    resolver: zodResolver(donationFormSchema),
     defaultValues: {
       donorId: "",
       requestId: "",
@@ -75,7 +89,7 @@ export default function CaseLog() {
   });
 
   const addDonationMutation = useMutation({
-    mutationFn: async (data: InsertDonation) => {
+    mutationFn: async (data: DonationFormData) => {
       return await apiRequest("POST", "/api/donations", data);
     },
     onSuccess: () => {
@@ -143,12 +157,12 @@ export default function CaseLog() {
     );
   });
 
-  const onSubmit = (data: InsertDonation) => {
+  const onSubmit = (data: DonationFormData) => {
     addDonationMutation.mutate(data);
   };
 
-  const approvedDonors = donors?.filter((d) => d.approvalStatus === "approved");
-  const completedRequests = requests?.filter((r) => r.status === "completed" || r.status === "in_progress");
+  const approvedDonors = donors?.filter((d) => d.approvalStatus === ApprovalStatus.APPROVED);
+  const completedRequests = requests?.filter((r) => r.status === RequestStatus.FULFILLED || r.status === RequestStatus.ASSIGNED);
 
   return (
     <div className="p-8 space-y-6">

@@ -20,10 +20,12 @@ import { Search, Phone, MessageCircle, CheckCircle, XCircle, Download } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Donor } from "@shared/schema";
+import type { Donor } from "@/types";
+import { ApprovalStatus, BloodGroup } from "@/types";
+import { BLOOD_GROUP_OPTIONS, bloodGroupDisplay } from "@/lib/enum-utils";
 
-const BLOOD_GROUPS = ["All", "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
-const APPROVAL_STATUS = ["All", "pending", "approved", "rejected"];
+const BLOOD_GROUPS_FILTER = ["All", ...Object.values(BloodGroup)];
+const APPROVAL_STATUS_FILTER = ["All", ...Object.values(ApprovalStatus)];
 
 export default function DonorTracker() {
   const { toast } = useToast();
@@ -37,7 +39,7 @@ export default function DonorTracker() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+    mutationFn: async ({ id, status }: { id: string; status: ApprovalStatus }) => {
       return await apiRequest("PATCH", `/api/donors/${id}/approval`, { approvalStatus: status });
     },
     onSuccess: () => {
@@ -94,7 +96,7 @@ export default function DonorTracker() {
     });
   };
 
-  const calculateDaysSinceLastDonation = (lastDonationDate: Date | null): number | null => {
+  const calculateDaysSinceLastDonation = (lastDonationDate: string | null): number | null => {
     if (!lastDonationDate) return null;
     const now = new Date();
     const lastDonation = new Date(lastDonationDate);
@@ -107,7 +109,7 @@ export default function DonorTracker() {
     const matchesSearch =
       donor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       donor.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      donor.phone.includes(searchQuery);
+      (donor.phone || "").includes(searchQuery);
     const matchesBloodGroup = bloodGroupFilter === "All" || donor.bloodGroup === bloodGroupFilter;
     const matchesApproval = approvalFilter === "All" || donor.approvalStatus === approvalFilter;
     const matchesCity = !cityFilter || donor.city.toLowerCase().includes(cityFilter.toLowerCase());
@@ -149,9 +151,9 @@ export default function DonorTracker() {
                 <SelectValue placeholder="Blood Group" />
               </SelectTrigger>
               <SelectContent>
-                {BLOOD_GROUPS.map((group) => (
+                {BLOOD_GROUPS_FILTER.map((group) => (
                   <SelectItem key={group} value={group}>
-                    {group === "All" ? "All Blood Groups" : group}
+                    {group === "All" ? "All Blood Groups" : (bloodGroupDisplay[group as BloodGroup] || group)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -161,9 +163,9 @@ export default function DonorTracker() {
                 <SelectValue placeholder="Approval Status" />
               </SelectTrigger>
               <SelectContent>
-                {APPROVAL_STATUS.map((status) => (
+                {APPROVAL_STATUS_FILTER.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status === "All" ? "All Statuses" : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status === "All" ? "All Statuses" : status}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -253,12 +255,12 @@ export default function DonorTracker() {
                         <StatusBadge status={donor.approvalStatus} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {donor.approvalStatus === "pending" && (
+                        {donor.approvalStatus === ApprovalStatus.PENDING && (
                           <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => approveMutation.mutate({ id: donor.id, status: "approved" })}
+                              onClick={() => approveMutation.mutate({ id: donor.id, status: ApprovalStatus.APPROVED })}
                               disabled={approveMutation.isPending}
                               data-testid={`button-approve-${donor.id}`}
                             >
@@ -268,7 +270,7 @@ export default function DonorTracker() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => approveMutation.mutate({ id: donor.id, status: "rejected" })}
+                              onClick={() => approveMutation.mutate({ id: donor.id, status: ApprovalStatus.REJECTED })}
                               disabled={approveMutation.isPending}
                               data-testid={`button-reject-${donor.id}`}
                             >

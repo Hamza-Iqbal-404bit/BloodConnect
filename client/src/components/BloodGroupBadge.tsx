@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils";
+import { BloodGroup } from "@/types";
+import { bloodGroupDisplay } from "@/lib/enum-utils";
 
 interface BloodGroupBadgeProps {
-  bloodGroup: string;
+  bloodGroup: BloodGroup | string;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -13,6 +15,11 @@ export function BloodGroupBadge({ bloodGroup, size = "md", className }: BloodGro
     lg: "w-20 h-20 text-lg",
   };
 
+  // Get display string (A+, B-, etc.) from enum value
+  const displayValue = Object.values(BloodGroup).includes(bloodGroup as BloodGroup)
+    ? bloodGroupDisplay[bloodGroup as BloodGroup]
+    : bloodGroup;
+
   return (
     <div
       className={cn(
@@ -22,7 +29,7 @@ export function BloodGroupBadge({ bloodGroup, size = "md", className }: BloodGro
       )}
       data-testid={`badge-bloodgroup-${bloodGroup}`}
     >
-      {bloodGroup}
+      {displayValue}
     </div>
   );
 }

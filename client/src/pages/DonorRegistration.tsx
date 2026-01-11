@@ -10,12 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { useToast } from "@/hooks/use-toast";
-import { insertDonorSchema, type InsertDonor } from "@shared/schema";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { BloodGroup } from "@/types";
+import { BLOOD_GROUP_OPTIONS, bloodGroupDisplay } from "@/lib/enum-utils";
+import { z } from "zod";
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+// Form validation schema
+const donorFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  bloodGroup: z.nativeEnum(BloodGroup, { errorMap: () => ({ message: "Please select a blood group" }) }),
+  city: z.string().min(2, "City is required"),
+  batch: z.string().optional(),
+  whatsappNumber: z.string().optional(),
+  lastDonationDate: z.date().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+});
+
+type DonorFormData = z.infer<typeof donorFormSchema>;
 
 interface DonorRegistrationProps {
   variant?: "page" | "dialog";
@@ -43,8 +58,8 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
     }
   };
 
-  const form = useForm<InsertDonor>({
-    resolver: zodResolver(insertDonorSchema),
+  const form = useForm<DonorFormData>({
+    resolver: zodResolver(donorFormSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -54,12 +69,12 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
       batch: "",
       whatsappNumber: "",
       lastDonationDate: undefined,
-      approvalStatus: "pending",
+      password: "donor123", // Default password for registration
     },
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (data: InsertDonor) => {
+    mutationFn: async (data: DonorFormData) => {
       return await apiRequest("POST", "/api/donors", data);
     },
     onSuccess: () => {
@@ -78,16 +93,21 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
     },
   });
 
-  const onSubmit = (data: InsertDonor) => {
+  const onSubmit = (data: DonorFormData) => {
     const phoneDigits = (data.phone || "").replace(/\D/g, "");
-    data.phone = phoneDigits ? `${phoneCode} ${phoneDigits}` : data.phone;
+    const phone = phoneDigits ? `${phoneCode} ${phoneDigits}` : data.phone;
 
+    let whatsappNumber = data.whatsappNumber;
     if (data.whatsappNumber) {
       const whatsappDigits = data.whatsappNumber.replace(/\D/g, "");
-      data.whatsappNumber = whatsappDigits ? `${whatsappCode} ${whatsappDigits}` : data.whatsappNumber;
+      whatsappNumber = whatsappDigits ? `${whatsappCode} ${whatsappDigits}` : data.whatsappNumber;
     }
 
-    registerMutation.mutate(data);
+    registerMutation.mutate({
+      ...data,
+      phone,
+      whatsappNumber,
+    });
   };
 
   if (isSuccess) {
@@ -233,13 +253,13 @@ export default function DonorRegistration({ variant = "page" }: DonorRegistratio
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {BLOOD_GROUPS.map((group) => (
+                            {BLOOD_GROUP_OPTIONS.map((option) => (
                               <SelectItem
-                                key={group}
-                                value={group}
+                                key={option.value}
+                                value={option.value}
                                 className="text-foreground"
                               >
-                                {group}
+                                {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>

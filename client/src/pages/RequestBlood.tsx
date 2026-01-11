@@ -10,16 +10,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { insertBloodRequestSchema, type InsertBloodRequest } from "@shared/schema";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { BloodGroup, UrgencyLevel } from "@/types";
+import { BLOOD_GROUP_OPTIONS, URGENCY_OPTIONS, urgencyDisplay } from "@/lib/enum-utils";
+import { z } from "zod";
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
-const URGENCY_LEVELS = [
-  { value: "normal", label: "Normal (24 hrs)", description: "Standard blood request" },
-  { value: "urgent", label: "Urgent (6 hrs)", description: "Blood needed within 6 hours" },
-  { value: "emergency", label: "Emergency (Immediate)", description: "Critical - blood needed immediately" },
+// Form validation schema
+const bloodRequestSchema = z.object({
+  patientName: z.string().min(2, "Patient name is required"),
+  bloodGroup: z.nativeEnum(BloodGroup, { errorMap: () => ({ message: "Please select a blood group" }) }),
+  unitsNeeded: z.number().min(1, "At least 1 unit required"),
+  urgencyLevel: z.nativeEnum(UrgencyLevel).optional(),
+  location: z.string().min(2, "Location is required"),
+  hospitalName: z.string().min(2, "Hospital name is required"),
+  contactPerson: z.string().min(2, "Contact person is required"),
+  contactPhone: z.string().optional(),
+  contactWhatsapp: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+type BloodRequestFormData = z.infer<typeof bloodRequestSchema>;
+
+const URGENCY_LEVEL_OPTIONS = [
+  { value: UrgencyLevel.LOW, label: "Normal (24 hrs)", description: "Standard blood request" },
+  { value: UrgencyLevel.MEDIUM, label: "Urgent (6 hrs)", description: "Blood needed within 6 hours" },
+  { value: UrgencyLevel.HIGH, label: "High Priority (2 hrs)", description: "Blood needed urgently" },
+  { value: UrgencyLevel.CRITICAL, label: "Emergency (Immediate)", description: "Critical - blood needed immediately" },
 ];
 
 interface RequestBloodProps {
@@ -47,26 +65,24 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
     }
   };
 
-  const form = useForm<InsertBloodRequest>({
-    resolver: zodResolver(insertBloodRequestSchema),
+  const form = useForm<BloodRequestFormData>({
+    resolver: zodResolver(bloodRequestSchema),
     defaultValues: {
       patientName: "",
       bloodGroup: undefined,
       unitsNeeded: 1,
-      urgencyLevel: "normal",
+      urgencyLevel: UrgencyLevel.LOW,
       location: "",
       hospitalName: "",
       contactPerson: "",
       contactPhone: "",
       contactWhatsapp: "",
       remarks: "",
-      status: "pending",
-      approvalStatus: "pending",
     },
   });
 
   const requestMutation = useMutation({
-    mutationFn: async (data: InsertBloodRequest) => {
+    mutationFn: async (data: BloodRequestFormData) => {
       return await apiRequest("POST", "/api/blood-requests", data);
     },
     onSuccess: () => {
@@ -85,53 +101,58 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
     },
   });
 
-  const onSubmit = (data: InsertBloodRequest) => {
+  const onSubmit = (data: BloodRequestFormData) => {
     const phoneDigits = (data.contactPhone || "").replace(/\D/g, "");
-    data.contactPhone = phoneDigits ? `${contactPhoneCode} ${phoneDigits}` : data.contactPhone;
+    const contactPhone = phoneDigits ? `${contactPhoneCode} ${phoneDigits}` : data.contactPhone;
 
+    let contactWhatsapp = data.contactWhatsapp;
     if (data.contactWhatsapp) {
       const whatsappDigits = data.contactWhatsapp.replace(/\D/g, "");
-      data.contactWhatsapp = whatsappDigits ? `${contactWhatsappCode} ${whatsappDigits}` : data.contactWhatsapp;
+      contactWhatsapp = whatsappDigits ? `${contactWhatsappCode} ${whatsappDigits}` : data.contactWhatsapp;
     }
 
-    requestMutation.mutate(data);
+    requestMutation.mutate({
+      ...data,
+      contactPhone,
+      contactWhatsapp,
+    });
   };
 
   if (isSuccess) {
     const content = (
       <Card className="max-w-md w-full">
-          <CardContent className="pt-12 pb-12 text-center space-y-6">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Request Submitted!</h2>
-              <p className="text-muted-foreground">
-                Your blood request has been submitted and is pending admin approval.
-                Once approved, we'll notify eligible donors who can help.
-              </p>
-            </div>
-            <div className="pt-4 space-y-3">
-              {variant === "dialog" ? (
-                <Button
-                  className="w-full"
-                  data-testid="button-close-dialog"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent("close-request-blood"));
-                  }}
-                >
-                  Close
+        <CardContent className="pt-12 pb-12 text-center space-y-6">
+          <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Request Submitted!</h2>
+            <p className="text-muted-foreground">
+              Your blood request has been submitted and is pending admin approval.
+              Once approved, we'll notify eligible donors who can help.
+            </p>
+          </div>
+          <div className="pt-4 space-y-3">
+            {variant === "dialog" ? (
+              <Button
+                className="w-full"
+                data-testid="button-close-dialog"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("close-request-blood"));
+                }}
+              >
+                Close
+              </Button>
+            ) : (
+              <Link href="/">
+                <Button className="w-full" data-testid="button-back-home">
+                  Back to Home
                 </Button>
-              ) : (
-                <Link href="/">
-                  <Button className="w-full" data-testid="button-back-home">
-                    Back to Home
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </Link>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
 
     if (variant === "dialog") {
@@ -205,13 +226,13 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {BLOOD_GROUPS.map((group) => (
+                              {BLOOD_GROUP_OPTIONS.map((option) => (
                                 <SelectItem
-                                  key={group}
-                                  value={group}
+                                  key={option.value}
+                                  value={option.value}
                                   className="text-foreground"
                                 >
-                                  {group}
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -256,7 +277,7 @@ export default function RequestBlood({ variant = "page" }: RequestBloodProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {URGENCY_LEVELS.map((level) => (
+                            {URGENCY_LEVEL_OPTIONS.map((level) => (
                               <SelectItem
                                 key={level.value}
                                 value={level.value}
