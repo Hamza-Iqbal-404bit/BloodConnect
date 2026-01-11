@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/shared/AppDialog";
 import { BloodGroupBadge } from "@/components/BloodGroupBadge";
 import { UrgencyBadge } from "@/components/UrgencyBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -356,60 +357,67 @@ export default function RequestManager() {
       </Tabs>
 
       {/* Matching Donors Dialog */}
-      <Dialog open={showMatchingDonors} onOpenChange={setShowMatchingDonors}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Matching Donors</DialogTitle>
-            <DialogDescription>
+      <AppDialog
+        open={showMatchingDonors}
+        onOpenChange={setShowMatchingDonors}
+        maxWidth="3xl"
+        maxHeightClassName="max-h-[80vh]"
+        showCloseButton={false}
+        bodyClassName="space-y-4"
+        header={
+          <div className="px-6 pt-6 pb-4 border-b">
+            <h2 className="text-lg font-semibold leading-none tracking-tight">Matching Donors</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               Donors matching {selectedRequest?.bloodGroup} blood group in {selectedRequest?.location}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {matchingDonors && matchingDonors.length > 0 ? (
-              matchingDonors.map((donor) => (
-                <Card key={donor.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <BloodGroupBadge bloodGroup={donor.bloodGroup} size="sm" />
-                        <div>
-                          <p className="font-medium text-foreground">{donor.name}</p>
-                          <p className="text-sm text-muted-foreground">{donor.city}</p>
-                        </div>
-                      </div>
-                      <StatusBadge status={donor.approvalStatus} />
-                    </div>
-                    <div className="mt-3 space-y-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="w-3 h-3" />
-                        {donor.phone}
-                      </div>
-                      {donor.whatsappNumber && (
-                        <a
-                          href={`https://wa.me/${donor.whatsappNumber.replace(/[^0-9]/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-green-600 hover:underline"
-                        >
-                          <MessageCircle className="w-3 h-3" />
-                          Contact on WhatsApp
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No matching donors found</p>
-            )}
+            </p>
           </div>
-          <DialogFooter>
+        }
+        footer={
+          <div className="flex justify-end gap-2 px-6 pb-6 pt-2 border-t">
             <Button variant="outline" onClick={() => setShowMatchingDonors(false)}>
               Close
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        {matchingDonors && matchingDonors.length > 0 ? (
+          matchingDonors.map((donor) => (
+            <Card key={donor.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <BloodGroupBadge bloodGroup={donor.bloodGroup} size="sm" />
+                    <div>
+                      <p className="font-medium text-foreground">{donor.name}</p>
+                      <p className="text-sm text-muted-foreground">{donor.city}</p>
+                    </div>
+                  </div>
+                  <StatusBadge status={donor.approvalStatus} />
+                </div>
+                <div className="mt-3 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="w-3 h-3" />
+                    {donor.phone}
+                  </div>
+                  {donor.whatsappNumber && (
+                    <a
+                      href={`https://wa.me/${donor.whatsappNumber.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-green-600 hover:underline"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      Contact on WhatsApp
+                    </a>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-center text-muted-foreground py-8">No matching donors found</p>
+        )}
+      </AppDialog>
     </div>
   );
 }

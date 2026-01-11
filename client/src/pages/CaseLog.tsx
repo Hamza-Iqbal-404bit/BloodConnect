@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { insertDonationSchema, type InsertDonation, type Donation, type Donor, type BloodRequest } from "@shared/schema";
+import { AppDialog } from "@/components/shared/AppDialog";
 
 type DonationWithDetails = Donation & {
   donor: Donor;
@@ -259,123 +260,104 @@ export default function CaseLog() {
       </Card>
 
       {/* Add Donation Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Record Donation</DialogTitle>
-            <DialogDescription>
+      <AppDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        maxWidth="2xl"
+        showCloseButton={false}
+        bodyClassName="space-y-4"
+        header={
+          <div className="px-6 pt-6 pb-4 border-b">
+            <h2 className="text-lg font-semibold leading-none tracking-tight">Record Donation</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               Record a completed blood donation to close a case
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="donorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Donor *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-donor">
-                            <SelectValue placeholder="Select donor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {approvedDonors?.map((donor) => (
-                            <SelectItem key={donor.id} value={donor.id}>
-                              {donor.name} ({donor.bloodGroup}) - {donor.city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requestId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Blood Request *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-request">
-                            <SelectValue placeholder="Select request" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {completedRequests?.map((request) => (
-                            <SelectItem key={request.id} value={request.id}>
-                              {request.patientName} ({request.bloodGroup}) - {request.hospitalName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="donationDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Donation Date *</FormLabel>
+            </p>
+          </div>
+        }
+        footer={
+          <div className="flex justify-end gap-2 px-6 pb-6 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddDialog(false)}
+              disabled={addDonationMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="case-log-form" disabled={addDonationMutation.isPending} data-testid="button-submit-donation">
+              {addDonationMutation.isPending ? "Recording..." : "Record Donation"}
+            </Button>
+          </div>
+        }
+      >
+        <Form {...form}>
+          <form id="case-log-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="donorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Donor *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : new Date())}
-                          data-testid="input-donation-date"
-                        />
+                        <SelectTrigger data-testid="select-donor">
+                          <SelectValue placeholder="Select donor" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="unitsContributed"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Units Contributed *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          data-testid="input-units"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        {approvedDonors?.map((donor) => (
+                          <SelectItem key={donor.id} value={donor.id}>
+                            {donor.name} ({donor.bloodGroup}) - {donor.city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
-                name="remarks"
+                name="requestId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Remarks (Optional)</FormLabel>
+                    <FormLabel>Blood Request *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-request">
+                          <SelectValue placeholder="Select request" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {completedRequests?.map((request) => (
+                          <SelectItem key={request.id} value={request.id}>
+                            {request.patientName} ({request.bloodGroup}) - {request.hospitalName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="donationDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Donation Date *</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Any additional notes about the donation"
-                        className="resize-none"
-                        rows={3}
+                      <Input
+                        type="datetime-local"
                         {...field}
-                        data-testid="input-remarks"
+                        value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : new Date())}
+                        data-testid="input-donation-date"
                       />
                     </FormControl>
                     <FormMessage />
@@ -383,23 +365,50 @@ export default function CaseLog() {
                 )}
               />
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowAddDialog(false)}
-                  disabled={addDonationMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={addDonationMutation.isPending} data-testid="button-submit-donation">
-                  {addDonationMutation.isPending ? "Recording..." : "Record Donation"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+              <FormField
+                control={form.control}
+                name="unitsContributed"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Units Contributed *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        data-testid="input-units"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="remarks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Any additional notes about the donation"
+                      className="resize-none"
+                      rows={3}
+                      {...field}
+                      value={field.value ?? ""}
+                      data-testid="input-remarks"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+      </AppDialog>
     </div>
   );
 }
