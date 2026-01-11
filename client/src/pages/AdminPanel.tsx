@@ -20,7 +20,9 @@ import {
     Shield,
     Activity,
 } from "lucide-react";
-import type { Donor, BloodRequest } from "@shared/schema";
+import type { Donor, BloodRequest, AdminStats } from "@/types";
+import { ApprovalStatus, UrgencyLevel, UserRole } from "@/types";
+import { bloodGroupDisplay, urgencyDisplay } from "@/lib/enum-utils";
 
 export default function AdminPanel() {
     const [, setLocation] = useLocation();
@@ -28,41 +30,32 @@ export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState("overview");
 
     // Check if user is admin
-    const { data: currentUser, isLoading: userLoading } = useQuery({
+    const { data: currentUser, isLoading: userLoading } = useQuery<{ role: UserRole; name: string } | null>({
         queryKey: ["/api/auth/me"],
         retry: false,
     });
 
     // Get admin stats
-    const { data: stats, isLoading: statsLoading } = useQuery<{
-        totalDonors: number;
-        approvedDonors: number;
-        pendingDonors: number;
-        totalRequests: number;
-        activeRequests: number;
-        completedRequests: number;
-        totalDonations: number;
-        todayDonations: number;
-    }>({
+    const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
         queryKey: ["/api/stats/admin"],
-        enabled: currentUser?.role === "admin",
+        enabled: currentUser?.role === UserRole.ADMIN,
     });
 
     // Get pending donors
     const { data: donors } = useQuery<Donor[]>({
         queryKey: ["/api/donors"],
-        enabled: currentUser?.role === "admin",
+        enabled: currentUser?.role === UserRole.ADMIN,
     });
 
     // Get pending blood requests
     const { data: requests } = useQuery<BloodRequest[]>({
         queryKey: ["/api/blood-requests"],
-        enabled: currentUser?.role === "admin",
+        enabled: currentUser?.role === UserRole.ADMIN,
     });
 
     // Approve/Reject donor mutation
     const approveDonorMutation = useMutation({
-        mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+        mutationFn: async ({ id, status }: { id: string; status: ApprovalStatus }) => {
             const response = await fetch(`/api/donors/${id}/approval`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -80,7 +73,7 @@ export default function AdminPanel() {
 
     // Approve/Reject request mutation
     const approveRequestMutation = useMutation({
-        mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+        mutationFn: async ({ id, status }: { id: string; status: ApprovalStatus }) => {
             const response = await fetch(`/api/blood-requests/${id}/approval`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -121,7 +114,7 @@ export default function AdminPanel() {
     }
 
     // Redirect if not admin
-    if (!currentUser || currentUser.role !== "admin") {
+    if (!currentUser || currentUser.role !== UserRole.ADMIN) {
         return (
             <div className="flex items-center justify-center min-h-screen p-4">
                 <Alert variant="destructive" className="max-w-md">
@@ -129,7 +122,7 @@ export default function AdminPanel() {
                     <AlertDescription>
                         Access denied. You don't have permission to view this page.
                         <Button
-                            variant="link"
+                            variant="ghost"
                             className="ml-2"
                             onClick={() => setLocation("/login")}
                         >
@@ -141,8 +134,8 @@ export default function AdminPanel() {
         );
     }
 
-    const pendingDonors = donors?.filter((d) => d.approvalStatus === "pending") || [];
-    const pendingRequests = requests?.filter((r) => r.approvalStatus === "pending") || [];
+    const pendingDonors = donors?.filter((d) => d.approvalStatus === ApprovalStatus.PENDING) || [];
+    const pendingRequests = requests?.filter((r) => r.approvalStatus === ApprovalStatus.PENDING) || [];
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -312,7 +305,7 @@ export default function AdminPanel() {
                                                                 onClick={() =>
                                                                     approveDonorMutation.mutate({
                                                                         id: donor.id,
-                                                                        status: "approved",
+                                                                        status: ApprovalStatus.APPROVED,
                                                                     })
                                                                 }
                                                                 disabled={approveDonorMutation.isPending}
@@ -326,7 +319,7 @@ export default function AdminPanel() {
                                                                 onClick={() =>
                                                                     approveDonorMutation.mutate({
                                                                         id: donor.id,
-                                                                        status: "rejected",
+                                                                        status: ApprovalStatus.REJECTED,
                                                                     })
                                                                 }
                                                                 disabled={approveDonorMutation.isPending}
@@ -383,14 +376,14 @@ export default function AdminPanel() {
                                                     <TableCell>
                                                         <Badge
                                                             variant={
-                                                                request.urgencyLevel === "emergency"
+                                                                request.urgencyLevel === UrgencyLevel.CRITICAL
                                                                     ? "destructive"
-                                                                    : request.urgencyLevel === "urgent"
+                                                                    : request.urgencyLevel === UrgencyLevel.HIGH || request.urgencyLevel === UrgencyLevel.MEDIUM
                                                                         ? "default"
                                                                         : "secondary"
                                                             }
                                                         >
-                                                            {request.urgencyLevel}
+                                                            {urgencyDisplay[request.urgencyLevel] || request.urgencyLevel}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
@@ -401,7 +394,7 @@ export default function AdminPanel() {
                                                                 onClick={() =>
                                                                     approveRequestMutation.mutate({
                                                                         id: request.id,
-                                                                        status: "approved",
+                                                                        status: ApprovalStatus.APPROVED,
                                                                     })
                                                                 }
                                                                 disabled={approveRequestMutation.isPending}
@@ -415,7 +408,7 @@ export default function AdminPanel() {
                                                                 onClick={() =>
                                                                     approveRequestMutation.mutate({
                                                                         id: request.id,
-                                                                        status: "rejected",
+                                                                        status: ApprovalStatus.REJECTED,
                                                                     })
                                                                 }
                                                                 disabled={approveRequestMutation.isPending}

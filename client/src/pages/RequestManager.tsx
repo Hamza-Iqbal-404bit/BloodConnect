@@ -21,9 +21,11 @@ import { Search, CheckCircle, XCircle, Users, MapPin, Phone, MessageCircle } fro
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { BloodRequest, Donor } from "@shared/schema";
+import type { BloodRequest, Donor } from "@/types";
+import { ApprovalStatus, RequestStatus, BloodGroup } from "@/types";
+import { BLOOD_GROUP_OPTIONS, bloodGroupDisplay } from "@/lib/enum-utils";
 
-const BLOOD_GROUPS = ["All", "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+const BLOOD_GROUPS_FILTER = ["All", ...Object.values(BloodGroup)];
 
 export default function RequestManager() {
   const { toast } = useToast();
@@ -42,7 +44,7 @@ export default function RequestManager() {
   });
 
   const approveRequestMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+    mutationFn: async ({ id, status }: { id: string; status: ApprovalStatus }) => {
       return await apiRequest("PATCH", `/api/blood-requests/${id}/approval`, { approvalStatus: status });
     },
     onSuccess: () => {
@@ -62,7 +64,7 @@ export default function RequestManager() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "pending" | "in_progress" | "completed" | "cancelled" }) => {
+    mutationFn: async ({ id, status }: { id: string; status: RequestStatus }) => {
       return await apiRequest("PATCH", `/api/blood-requests/${id}/status`, { status });
     },
     onSuccess: () => {
@@ -90,10 +92,10 @@ export default function RequestManager() {
     return matchesSearch && matchesBloodGroup;
   });
 
-  const pendingRequests = filteredRequests?.filter((r) => r.status === "pending" && r.approvalStatus === "approved");
-  const inProgressRequests = filteredRequests?.filter((r) => r.status === "in_progress");
-  const completedRequests = filteredRequests?.filter((r) => r.status === "completed");
-  const awaitingApprovalRequests = filteredRequests?.filter((r) => r.approvalStatus === "pending");
+  const pendingRequests = filteredRequests?.filter((r) => r.status === RequestStatus.PENDING && r.approvalStatus === ApprovalStatus.APPROVED);
+  const inProgressRequests = filteredRequests?.filter((r) => r.status === RequestStatus.ASSIGNED);
+  const completedRequests = filteredRequests?.filter((r) => r.status === RequestStatus.FULFILLED);
+  const awaitingApprovalRequests = filteredRequests?.filter((r) => r.approvalStatus === ApprovalStatus.PENDING);
 
   const RequestCard = ({ request }: { request: BloodRequest }) => (
     <Card className="hover-elevate" data-testid={`card-request-${request.id}`}>
@@ -140,12 +142,12 @@ export default function RequestManager() {
             {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
           </p>
           <div className="flex gap-2">
-            {request.approvalStatus === "pending" ? (
+            {request.approvalStatus === ApprovalStatus.PENDING ? (
               <>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => approveRequestMutation.mutate({ id: request.id, status: "approved" })}
+                  onClick={() => approveRequestMutation.mutate({ id: request.id, status: ApprovalStatus.APPROVED })}
                   disabled={approveRequestMutation.isPending}
                   data-testid={`button-approve-request-${request.id}`}
                 >
@@ -155,7 +157,7 @@ export default function RequestManager() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => approveRequestMutation.mutate({ id: request.id, status: "rejected" })}
+                  onClick={() => approveRequestMutation.mutate({ id: request.id, status: ApprovalStatus.REJECTED })}
                   disabled={approveRequestMutation.isPending}
                   data-testid={`button-reject-request-${request.id}`}
                 >
@@ -165,20 +167,20 @@ export default function RequestManager() {
               </>
             ) : (
               <>
-                {request.status === "pending" && (
+                {request.status === RequestStatus.PENDING && (
                   <Button
                     size="sm"
-                    onClick={() => updateStatusMutation.mutate({ id: request.id, status: "in_progress" })}
+                    onClick={() => updateStatusMutation.mutate({ id: request.id, status: RequestStatus.ASSIGNED })}
                     disabled={updateStatusMutation.isPending}
                     data-testid={`button-start-${request.id}`}
                   >
                     Start Processing
                   </Button>
                 )}
-                {request.status === "in_progress" && (
+                {request.status === RequestStatus.ASSIGNED && (
                   <Button
                     size="sm"
-                    onClick={() => updateStatusMutation.mutate({ id: request.id, status: "completed" })}
+                    onClick={() => updateStatusMutation.mutate({ id: request.id, status: RequestStatus.FULFILLED })}
                     disabled={updateStatusMutation.isPending}
                     data-testid={`button-complete-${request.id}`}
                   >
@@ -231,9 +233,9 @@ export default function RequestManager() {
                 <SelectValue placeholder="Blood Group" />
               </SelectTrigger>
               <SelectContent>
-                {BLOOD_GROUPS.map((group) => (
+                {BLOOD_GROUPS_FILTER.map((group) => (
                   <SelectItem key={group} value={group}>
-                    {group === "All" ? "All Blood Groups" : group}
+                    {group === "All" ? "All Blood Groups" : (bloodGroupDisplay[group as BloodGroup] || group)}
                   </SelectItem>
                 ))}
               </SelectContent>

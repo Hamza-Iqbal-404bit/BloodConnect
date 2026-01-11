@@ -6,13 +6,16 @@ import { BloodAvailabilityCard } from "@/components/BloodAvailabilityCard";
 import { ActiveRequestCard } from "@/components/ActiveRequestCard";
 import { Droplet, Users, Heart, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
-import type { BloodInventory, BloodRequest } from "@shared/schema";
+import type { BloodInventory, BloodRequest, PublicStats } from "@/types";
 import DonorRegistration from "@/pages/DonorRegistration";
 import RequestBlood from "@/pages/RequestBlood";
 import { AppDialog } from "@/components/shared/AppDialog";
 import { useUiDialogs } from "@/lib/ui-dialogs";
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+import { BloodGroup } from "@/types";
+import { BLOOD_GROUPS, bloodGroupDisplay } from "@/lib/enum-utils";
+
+const BLOOD_GROUP_DISPLAY = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 
 export default function Home() {
   const {
@@ -32,12 +35,7 @@ export default function Home() {
     queryKey: ["/api/blood-requests/active"],
   });
 
-  const { data: stats } = useQuery<{
-    totalDonors: number;
-    totalDonations: number;
-    activeRequests: number;
-    completedRequests: number;
-  }>({
+  const { data: stats } = useQuery<PublicStats>({
     queryKey: ["/api/stats/public"],
   });
 
@@ -124,7 +122,7 @@ export default function Home() {
 
           {inventoryLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {BLOOD_GROUPS.map((group) => (
+              {BLOOD_GROUP_DISPLAY.map((group) => (
                 <Card key={group} className="animate-pulse">
                   <CardContent className="p-6 h-40" />
                 </Card>
@@ -134,10 +132,11 @@ export default function Home() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {BLOOD_GROUPS.map((group) => {
                 const item = inventory?.find((inv) => inv.bloodGroup === group);
+                const displayGroup = bloodGroupDisplay[group];
                 return (
                   <BloodAvailabilityCard
                     key={group}
-                    bloodGroup={group}
+                    bloodGroup={displayGroup}
                     unitsAvailable={item?.unitsAvailable || 0}
                     status={(item?.status as "available" | "low" | "urgent") || "available"}
                   />

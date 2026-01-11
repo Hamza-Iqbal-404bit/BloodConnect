@@ -5,7 +5,7 @@ import { UrgencyBadge } from "./UrgencyBadge";
 import { MapPin, Phone, Clock, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { BloodRequest } from "@shared/schema";
+import type { BloodRequest } from "@/types";
 
 interface ActiveRequestCardProps {
   request: BloodRequest;

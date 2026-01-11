@@ -1,14 +1,166 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider   = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ============== ENUMS ==============
+
+enum BloodGroup {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  ASSIGNED
+  REJECTED
+  FULFILLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContactMethod {
+  EMAIL
+  PHONE
+  WHATSAPP
+}
+
+enum UserRole {
+  ADMIN
+  DONOR
+  REQUESTER
+}
+
+// ============== MODELS ==============
+
+model User {
+  userId           String        @id @default(uuid())
+  email            String        @unique
+  phoneNo          String?       @unique
+  password         String
+  firstName        String
+  lastName         String
+  preferredContact ContactMethod @default(WHATSAPP)
+  bloodGroup       BloodGroup
+  role             UserRole      @default(DONOR)
+
+  isActive Boolean @default(true)
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [cityId])
+
+  requests Request[]
+  donor    Donor?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Donor {
+  donorId                String         @id @default(uuid())
+  isAvailableForDonation Boolean        @default(true)
+  lastDonated            DateTime?
+  totalDonations         Int            @default(0)
+  approvalStatus         ApprovalStatus @default(PENDING)
+  whatsappNumber         String?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  donations Donation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model City {
+  cityId String @id @default(uuid())
+  name   String @unique
+
+  stateId String?
+  state   State?  @relation(fields: [stateId], references: [stateId])
+
+  users    User[]
+  requests Request[]
+}
+
+model State {
+  stateId String @id @default(uuid())
+  name    String @unique
+  cities  City[]
+}
+
+model Request {
+  requestId       String         @id @default(uuid())
+  patientName     String
+  quantity        Int            @default(1)
+  address         String
+  hospitalName    String
+  contactPerson   String
+  contactNo       String
+  contactWhatsapp String?
+  description     String?        @db.Text
+  bloodGroup      BloodGroup
+  urgencyLevel    UrgencyLevel   @default(LOW)
+  status          RequestStatus  @default(PENDING)
+  approvalStatus  ApprovalStatus @default(PENDING)
+  remarks         String?
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [cityId])
+
+  donations Donation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Donation {
+  donationId   String   @id @default(uuid())
+  donationDate DateTime @default(now())
+  quantity     Int      @default(1)
+  remarks      String?
+
+  donor   Donor  @relation(fields: [donorId], references: [donorId])
+  donorId String
+
+  request   Request @relation(fields: [requestId], references: [requestId])
+  requestId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BloodInventory {
+  id             String     @id @default(uuid())
+  bloodGroup     BloodGroup @unique
+  unitsAvailable Int        @default(0)
+  status         String     @default("urgent") // available, low, urgent
+
+  lastUpdated DateTime @default(now()) @updatedAt
 }
